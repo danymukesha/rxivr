@@ -1,0 +1,67 @@
+#' Get Search URLs
+#'
+#' This function returns the URLs to be used to retrieve data from the medRxiv/bioRxiv databases.
+#' 
+#' @param search A search instance containing query and date range.
+#' @param database The database name (either "medRxiv" or "bioRxiv").
+#' @return A list of URLs to be used to retrieve data from medRxiv/bioRxiv databases.
+#' @export
+#' @examples
+#' search <- list(query = "COVID-19", since = as.Date("2020-01-01"), until = as.Date("2021-01-01"))
+#' if(FALSE){
+#' get_search_urls(search, "medRxiv")
+#' }
+get_search_urls <- function(search, database) {
+  # The databases don't support wildcards properly nowadays
+  if (grepl("\\?|\\*", search$query)) {
+    stop("Queries with wildcards are not supported by medRxiv/bioRxiv database")
+  }
+  
+  # NOT connectors aren't supported
+  if (grepl(" AND NOT ", search$query)) {
+    stop("NOT connectors aren't supported")
+  }
+  
+  max_group_level <- get_max_group_level(search$query)
+  
+  if (max_group_level > 1) {
+    stop("Max 1-level parentheses grouping exceeded")
+  }
+  
+  if (grepl("\\) AND \\(", search$query)) {
+    stop("Only the OR connector can be used between the groups")
+  }
+  
+  query <- apply_on_each_term(search$query, function(x) gsub(" ", "+", x))
+  queries <- unlist(strsplit(query, "\\) OR \\("))
+  queries <- sub("^\\(", "", queries)
+  queries <- sub("\\)$", "", queries)
+  
+  urls <- list()
+  
+  date_pattern <- "%Y-%m-%d"
+  since <- if (!is.null(search$since)) format(search$since, date_pattern) else "1970-01-01"
+  until <- if (!is.null(search$until)) format(search$until, date_pattern) else format(Sys.Date(), date_pattern)
+  date_parameter <- sprintf("limit_from%%3A%s%%20limit_to%%3A%s", since, until)
+  
+  url_suffix <- sprintf("jcode%%3A%s%%20%s%%20numresults%%3A75%%20sort%%3Apublication-date%%20direction%%3Adescending%%20format_result%%3Acondensed",
+                        tolower(database), date_parameter)
+  
+  for (query in queries) {
+    ors_count <- stringr::str_count(query, pattern = stringr::fixed("OR"))
+    ands_count <- stringr::str_count(query, pattern = stringr::fixed("AND"))
+    
+    if (ors_count > 0 && ands_count > 0) {
+      stop(sprintf("Mixed inner connectors found. Each query group must use only one connector type, only ANDs or only ORs: %s", query))
+    }
+    
+    query_match_flag <- if (ands_count > 0) "match-all" else "match-any"
+    encoded_query <- gsub(" ", "%2B", query)
+    encoded_query <- gsub("\\+", "%252B", encoded_query)
+    
+    url <- sprintf("%s/search/abstract_title%%3A%s%%20abstract_title_flags%%3A%s%%20%s", BASE_URL, encoded_query, query_match_flag, url_suffix)
+    urls <- append(urls, url)
+  }
+  
+  return(urls)
+}

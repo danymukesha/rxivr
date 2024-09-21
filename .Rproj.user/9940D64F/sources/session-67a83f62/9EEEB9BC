@@ -1,0 +1,26 @@
+{
+    "id": "9EEEB9BC",
+    "path": "C:/08_pkgs/rxivr/R/get_search_urls.R",
+    "project_path": "R/get_search_urls.R",
+    "type": "r_source",
+    "hash": "0",
+    "contents": "",
+    "dirty": false,
+    "created": 1720848400404.0,
+    "source_on_save": false,
+    "relative_order": 2,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "21,27",
+        "scrollLine": "2"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1720848476,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1720848476727,
+    "read_only": false,
+    "read_only_alternatives": []
+}
